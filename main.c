@@ -33,20 +33,22 @@ unsigned short **init_table() {
 int main() {
   int i = 0, j = 0;
   unsigned short **table = init_table();
-  unsigned short **table_after_move = generateMove(table);
+  unsigned short **table_after_move, **temp_table;
+  table_after_move = generateMove(table);
   while (i++ < 20) {
-    table_after_move = generateMove(table_after_move);
-    if (table_after_move == NULL) {
-      printf("THAT WAS THE LAST MOVE!");
+    temp_table = generateMove(table_after_move);
+    if (temp_table == NULL) {
+      printf("THAT WAS THE LAST MOVE: \n");
+      break;
     }
+    table_after_move = temp_table;
   }
   for (i = 0; i < TABLE_SIZE; i++) {
     printf("%d %d %d %d %d\n", table_after_move[i][0], table_after_move[i][1], table_after_move[i][2],
            table_after_move[i][3], table_after_move[i][4]);
   }
-  bool has_next_step = check_has_next_step(table);
 
-  printf("ez");
+  printf("\nThis is the end.\n");
 }
 
 unsigned short **generateMove(unsigned short **table) {
