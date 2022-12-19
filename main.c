@@ -4,11 +4,6 @@
 #include <bits/types/time_t.h>
 #include <time.h>
 
-struct ITERATION {
-    int size;
-    unsigned short ***tables
-};
-
 struct MOVE {
     int from;
     int to;
@@ -16,21 +11,28 @@ struct MOVE {
     bool win;
     int depth;
     struct MOVE *prev_move;
-    struct MOVE *next_move
+    struct MOVE **next_move
 };
+
+int c = 0;
 
 static const int FIELD_NOT_IN_THE_GAME = 7;
 static const int EMPTY = 0;
-static const int PUG = 1;
+static const int PEG = 1;
 static const int TABLE_SIZE = 5;
+static const int WIN_RESULT = 1;
+static const int HAS_ANOTHER_PUG_THAT_CAN_JUMP = 2;
+static const int HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP = 3;
 
 unsigned short **init_table();
 
-bool check_has_next_step(unsigned short **table);
+short check_has_next_step(unsigned short **table);
 
-void generate_next_moves(struct MOVE parent);
+void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves);
 
 unsigned short **copy_table(unsigned short **table);
+
+void free_table(unsigned short **table);
 
 unsigned short **init_table() {
   unsigned short **table = malloc(TABLE_SIZE * sizeof(short *));
@@ -40,7 +42,7 @@ unsigned short **init_table() {
   for (i = 0; i < TABLE_SIZE; i++) {
     table[i] = malloc(TABLE_SIZE * sizeof(short));
     for (j = 0; j < TABLE_SIZE; j++) {
-      table[i][j] = PUG;
+      table[i][j] = PEG;
     }
   }
 
@@ -52,29 +54,49 @@ unsigned short **init_table() {
 int main() {
   time_t start, end;
   time(&start);
-  int i, j = 0, k = 0;
-  struct ITERATION iteration, tmp_iteration;
-  unsigned short **tmp_table, **table = init_table();
   struct MOVE base;
-  base.table = table;
+  struct MOVE ** win_moves = malloc(1 * sizeof (struct MOVE *));
+  base.table = init_table();
   base.win = false;
   base.depth = 1;
 
-  generate_next_moves(base);
+  generate_next_moves(base, win_moves);
 
   time(&end);
-  printf("That's it in %2lf seconds", difftime(start, end));
+  printf("That's it in %f seconds\n", difftime(end, start));
+  int win_moves_size = sizeof win_moves / sizeof(struct MOVE *);
+  printf("debug point with %d win move", win_moves_size);
+
 
 }
 
-void generate_next_moves(struct MOVE parent) {
+void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
+  c++;
 //  printf("DEPTH: %d, FROM: %d TO: %d \n", parent.depth, parent.from, parent.to);
-  unsigned short **temp_table,
-          **table = parent.table;
+  if (parent.depth == 2) {
+    printf("\n2. level\n");
+  }
+  unsigned short **table = parent.table;
 
-  if (!check_has_next_step(parent.table) || parent.depth > 19) {
+  short check_result = check_has_next_step(table);
+
+  if (check_result == WIN_RESULT || check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP || parent.depth > 40) {
+    if (parent.depth > 40) {
+      printf("out of steps\n");
+    }
+
+    if (check_result == WIN_RESULT) {
+      printf("win\n");
+    }
+    parent.win = (check_result == WIN_RESULT);
+    if (parent.win) {
+      int current_size = sizeof winner_moves / sizeof(struct MOVE *);
+      winner_moves = realloc(winner_moves, (current_size + 1) * sizeof (struct MOVE *));
+      winner_moves[current_size + 1] = &parent;
+    }
     return;
   }
+
   int i, j;
   for (i = 0; i < TABLE_SIZE; i++) {
     for (j = 0; j < TABLE_SIZE; j++) {
@@ -82,127 +104,84 @@ void generate_next_moves(struct MOVE parent) {
         continue;
       }
 
-      if (i >= 2 && table[i - 1][j] == PUG && table[i - 2][j] == EMPTY) {
-        temp_table = copy_table(table);
-        temp_table[i][j] = EMPTY;
-        temp_table[i - 1][j] = EMPTY;
-        temp_table[i - 2][j] = PUG;
+      if (i >= 2 && table[i - 1][j] == PEG && table[i - 2][j] == EMPTY) {
         struct MOVE move;
-        move.table = temp_table;
+        move.table = copy_table(table);
+        move.table[i][j] = EMPTY;
+        move.table[i - 1][j] = EMPTY;
+        move.table[i - 2][j] = PEG;
+
         move.prev_move = &parent;
         move.from = i * TABLE_SIZE + j;
         move.to = (i - 2) * TABLE_SIZE + j;
         move.depth = parent.depth + 1;
-        generate_next_moves(move);
+        move.win = false;
+        generate_next_moves(move, NULL);
+        free_table(move.table);
         continue;
       }
 
-      if (i >= 2 && j <= 2 && table[i - 1][j + 1] == PUG && table[i - 2][j + 2] == EMPTY) {
-        temp_table = copy_table(table);
-        temp_table[i][j] = EMPTY;
-        temp_table[i - 1][j + 1] = EMPTY;
-        temp_table[i - 2][j + 2] = PUG;
+      if (j <= 2 && table[i][j + 1] == PEG && table[i][j + 2] == EMPTY) {
         struct MOVE move;
-        move.table = temp_table;
-        move.prev_move = &parent;
-        move.from = i * TABLE_SIZE + j;
-        move.to = (i - 2) * TABLE_SIZE + (j + 2);
-        move.depth = parent.depth + 1;
-        generate_next_moves(move);
-        continue;
-      }
+        move.table = copy_table(table);
+        move.table[i][j] = EMPTY;
+        move.table[i][j + 1] = EMPTY;
+        move.table[i][j + 2] = PEG;
 
-      if (j <= 2 && table[i][j + 1] == PUG && table[i][j + 2] == EMPTY) {
-        temp_table = copy_table(table);
-        temp_table[i][j] = EMPTY;
-        temp_table[i][j + 1] = EMPTY;
-        temp_table[i][j + 2] = PUG;
-        struct MOVE move;
-        move.table = temp_table;
         move.prev_move = &parent;
         move.from = i * TABLE_SIZE + j;
         move.to = i * TABLE_SIZE + (j + 2);
         move.depth = parent.depth + 1;
-        generate_next_moves(move);
+        move.win = false;
+        generate_next_moves(move, NULL);
+        free_table(move.table);
         continue;
       }
 
-      if (i <= 2 && j <= 2 && table[i + 1][j + 1] == PUG && table[i + 2][j + 2] == EMPTY) {
-        temp_table = copy_table(table);
-        temp_table[i][j] = EMPTY;
-        temp_table[i + 1][j + 1] = EMPTY;
-        temp_table[i + 2][j + 2] = PUG;
+      if (i <= 2 && table[i + 1][j] == PEG && table[i + 2][j] == EMPTY) {
         struct MOVE move;
-        move.table = temp_table;
-        move.prev_move = &parent;
-        move.from = i * TABLE_SIZE + j;
-        move.to = (i + 2) * TABLE_SIZE + (j + 2);
-        move.depth = parent.depth + 1;
-        generate_next_moves(move);
-        continue;
-      }
+        move.table = copy_table(table);
+        move.table[i][j] = EMPTY;
+        move.table[i + 1][j] = EMPTY;
+        move.table[i + 2][j] = PEG;
 
-      if (i <= 2 && table[i + 1][j] == PUG && table[i + 2][j] == EMPTY) {
-        temp_table = copy_table(table);
-        temp_table[i][j] = EMPTY;
-        temp_table[i + 1][j] = EMPTY;
-        temp_table[i + 2][j] = PUG;
-        struct MOVE move;
-        move.table = temp_table;
         move.prev_move = &parent;
         move.from = i * TABLE_SIZE + j;
         move.to = (i + 2) * TABLE_SIZE + j;
         move.depth = parent.depth + 1;
-        generate_next_moves(move);
+        move.win = false;
+        generate_next_moves(move, NULL);
+        free_table(move.table);
         continue;
       }
 
-      if (i <= 2 && j >= 2 && table[i + 1][j - 1] == PUG && table[i + 2][j - 2] == EMPTY) {
-        temp_table = copy_table(table);
-        temp_table[i][j] = EMPTY;
-        temp_table[i + 1][j - 1] = EMPTY;
-        temp_table[i + 2][j - 2] = PUG;
-        struct MOVE move;
-        move.table = temp_table;
-        move.prev_move = &parent;
-        move.from = i * TABLE_SIZE + j;
-        move.to = (i + 2) * TABLE_SIZE + (j - 2);
-        move.depth = parent.depth + 1;
-        generate_next_moves(move);
-        continue;
-      }
 
-      if (j >= 2 && table[i][j - 1] == PUG && table[i][j - 2] == EMPTY) {
-        temp_table = copy_table(table);
-        temp_table[i][j] = EMPTY;
-        temp_table[i][j - 1] = EMPTY;
-        temp_table[i][j - 2] = PUG;
+      if (j >= 2 && table[i][j - 1] == PEG && table[i][j - 2] == EMPTY) {
         struct MOVE move;
-        move.table = temp_table;
+        move.table = copy_table(table);
+        move.table[i][j] = EMPTY;
+        move.table[i][j - 1] = EMPTY;
+        move.table[i][j - 2] = PEG;
+
         move.prev_move = &parent;
         move.from = i * TABLE_SIZE + j;
         move.to = i * TABLE_SIZE + (j - 2);
         move.depth = parent.depth + 1;
-        generate_next_moves(move);
-        continue;
-      }
+        move.win = false;
 
-      if (i >= 2 && j >= 2 && table[i - 1][j - 1] == PUG && table[i - 2][j - 2] == EMPTY) {
-        temp_table = copy_table(table);
-        temp_table[i][j] = EMPTY;
-        temp_table[i - 1][j - 1] = EMPTY;
-        temp_table[i - 2][j - 2] = PUG;
-        struct MOVE move;
-        move.table = temp_table;
-        move.prev_move = &parent;
-        move.from = i * TABLE_SIZE + j;
-        move.to = (i - 2) * TABLE_SIZE + (j - 2);
-        move.depth = parent.depth + 1;
-        generate_next_moves(move);
+        generate_next_moves(move, NULL);
+        free_table(move.table);
         continue;
       }
     }
   }
+}
+
+void free_table(unsigned short **table) {
+  for (int i = 0; i < TABLE_SIZE; i++) {
+    free(table[i]);
+  }
+  free(table);
 }
 
 unsigned short **copy_table(unsigned short **table) {
@@ -220,7 +199,7 @@ unsigned short **copy_table(unsigned short **table) {
   return new_table;
 }
 
-bool check_has_next_step(unsigned short **table) {
+short check_has_next_step(unsigned short **table) {
   int i, j, sum = 0;
   bool has_pug_to_jump_with = false;
 
@@ -229,15 +208,15 @@ bool check_has_next_step(unsigned short **table) {
       sum += table[i][j];
 
       if (!has_pug_to_jump_with) {
-        if (table[i][j] == PUG && (
-                (i >= 2 && table[i - 1][j] == PUG && table[i - 2][j] == EMPTY) ||
-                (i >= 2 && j <= 2 && table[i - 1][j + 1] == PUG && table[i - 2][j + 2] == EMPTY) ||
-                (j <= 2 && table[i][j + 1] == PUG && table[i][j + 2] == EMPTY) ||
-                (i <= 2 && j <= 2 && table[i + 1][j + 1] == PUG && table[i + 2][j + 2] == EMPTY) ||
-                (i <= 2 && table[i + 1][j] == PUG && table[i + 2][j] == EMPTY) ||
-                (i <= 2 && j >= 2 && table[i + 1][j - 1] == PUG && table[i + 2][j - 2] == EMPTY) ||
-                (j >= 2 && table[i][j - 1] == PUG && table[i][j - 2] == EMPTY) ||
-                (i >= 2 && j >= 2 && table[i - 1][j - 1] == PUG && table[i - 2][j - 2] == EMPTY))
+        if (table[i][j] == PEG && (
+                (i >= 2 && table[i - 1][j] == PEG && table[i - 2][j] == EMPTY) ||
+                (i >= 2 && j <= 2 && table[i - 1][j + 1] == PEG && table[i - 2][j + 2] == EMPTY) ||
+                (j <= 2 && table[i][j + 1] == PEG && table[i][j + 2] == EMPTY) ||
+                (i <= 2 && j <= 2 && table[i + 1][j + 1] == PEG && table[i + 2][j + 2] == EMPTY) ||
+                (i <= 2 && table[i + 1][j] == PEG && table[i + 2][j] == EMPTY) ||
+                (i <= 2 && j >= 2 && table[i + 1][j - 1] == PEG && table[i + 2][j - 2] == EMPTY) ||
+                (j >= 2 && table[i][j - 1] == PEG && table[i][j - 2] == EMPTY) ||
+                (i >= 2 && j >= 2 && table[i - 1][j - 1] == PEG && table[i - 2][j - 2] == EMPTY))
                 ) {
           has_pug_to_jump_with = true;
         }
@@ -247,8 +226,8 @@ bool check_has_next_step(unsigned short **table) {
   sum -= (table[0][0] + table[0][4] + table[4][0] + table[4][4]);
 
   if (sum <= 1) {
-    return false;
+    return WIN_RESULT;
   }
 
-  return has_pug_to_jump_with;
+  return has_pug_to_jump_with ? HAS_ANOTHER_PUG_THAT_CAN_JUMP : HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP;
 }
