@@ -14,7 +14,7 @@ struct MOVE {
     struct MOVE **next_move
 };
 
-int c = 0;
+int checked_step_counter = 0;
 
 static const int FIELD_NOT_IN_THE_GAME = 7;
 static const int EMPTY = 0;
@@ -28,7 +28,7 @@ unsigned short **init_table();
 
 short check_has_next_step(unsigned short **table);
 
-void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves);
+void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves, long *pInt);
 
 unsigned short **copy_table(unsigned short **table);
 
@@ -54,24 +54,28 @@ unsigned short **init_table() {
 int main() {
   time_t start, end;
   time(&start);
+  long * count_of_winner_moves = malloc(sizeof(long));
+  *count_of_winner_moves = 1;
   struct MOVE base;
-  struct MOVE ** win_moves = malloc(1 * sizeof (struct MOVE *));
+  struct MOVE **winner_moves = malloc(*count_of_winner_moves * sizeof(struct MOVE *));
   base.table = init_table();
   base.win = false;
   base.depth = 1;
 
-  generate_next_moves(base, win_moves);
+  generate_next_moves(base, winner_moves, count_of_winner_moves);
 
   time(&end);
   printf("That's it in %f seconds\n", difftime(end, start));
-  int win_moves_size = sizeof win_moves / sizeof(struct MOVE *);
-  printf("debug point with %d win move", win_moves_size);
+  printf("debug point with %d win move", count_of_winner_moves);
 
 
 }
 
-void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
-  c++;
+void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves, long *count_of_winner_moves) {
+  checked_step_counter++;
+  if (*count_of_winner_moves % 10 == 0) {
+    printf("%d count of winner moves\n", count_of_winner_moves);
+  }
 //  printf("DEPTH: %d, FROM: %d TO: %d \n", parent.depth, parent.from, parent.to);
   if (parent.depth == 2) {
     printf("\n2. level\n");
@@ -80,27 +84,22 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
 
   short check_result = check_has_next_step(table);
 
-  if (check_result == WIN_RESULT || check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP || parent.depth > 40) {
-    if (parent.depth > 40) {
-      printf("out of steps\n");
+  if (check_result == WIN_RESULT || check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP || parent.depth > 20) {
+    if (parent.depth > 20) {
+      printf("Reached trashold\n");
     }
-
-    if (check_result == WIN_RESULT) {
-      printf("win\n");
-    }
-    if (check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP) {
-      struct MOVE tmp_move = parent;
-      while (tmp_move.prev_move != NULL) {
-        printf("%d->%d | ", tmp_move.from, tmp_move.to);
-        tmp_move = *tmp_move.prev_move;
-      }
-      printf("\n");
-    }
+//    if (check_result == WIN_RESULT) {
+//      struct MOVE tmp_move = parent;
+//      while (tmp_move.prev_move != NULL) {
+//        printf("%d->%d | ", tmp_move.from, tmp_move.to);
+//        tmp_move = *tmp_move.prev_move;
+//      }
+//      printf("\n");
+//    }
     parent.win = (check_result == WIN_RESULT);
     if (parent.win) {
-      int current_size = sizeof winner_moves / sizeof(struct MOVE *);
-      winner_moves = realloc(winner_moves, (current_size + 1) * sizeof (struct MOVE *));
-      winner_moves[current_size + 1] = &parent;
+      winner_moves = realloc(winner_moves, (++(*count_of_winner_moves)) * sizeof(struct MOVE *));
+      winner_moves[*count_of_winner_moves - 2] = &parent;
     }
     return;
   }
@@ -121,10 +120,27 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
 
         move.prev_move = &parent;
         move.from = i * TABLE_SIZE + j + 1;
-        move.to = (i - 2) * TABLE_SIZE + j + 1 ;
+        move.to = (i - 2) * TABLE_SIZE + j + 1;
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, NULL);
+        generate_next_moves(move, winner_moves, count_of_winner_moves);
+        free_table(move.table);
+        continue;
+      }
+
+      if (i >= 2 && j <= 2 && table[i - 1][j + 1] == PEG && table[i - 2][j + 2] == EMPTY) {
+        struct MOVE move;
+        move.table = copy_table(table);
+        move.table[i][j] = EMPTY;
+        move.table[i - 1][j + 1] = EMPTY;
+        move.table[i - 2][j + 2] = PEG;
+
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j + 1;
+        move.to = (i - 2) * TABLE_SIZE + (j + 2 + 1);
+        move.depth = parent.depth + 1;
+        move.win = false;
+        generate_next_moves(move, winner_moves, count_of_winner_moves);
         free_table(move.table);
         continue;
       }
@@ -141,7 +157,24 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
         move.to = i * TABLE_SIZE + (j + 2 + 1);
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, NULL);
+        generate_next_moves(move, winner_moves, count_of_winner_moves);
+        free_table(move.table);
+        continue;
+      }
+
+      if (i <= 2 && j <= 2 && table[i + 1][j + 1] == PEG && table[i + 2][j + 2] == EMPTY) {
+        struct MOVE move;
+        move.table = copy_table(table);
+        move.table[i][j] = EMPTY;
+        move.table[i + 1][j + 1] = EMPTY;
+        move.table[i + 2][j + 2] = PEG;
+
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j + 1;
+        move.to = (i + 2) * TABLE_SIZE + (j + 2 + 1);
+        move.depth = parent.depth + 1;
+        move.win = false;
+        generate_next_moves(move, winner_moves, count_of_winner_moves);
         free_table(move.table);
         continue;
       }
@@ -158,7 +191,24 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
         move.to = (i + 2) * TABLE_SIZE + j + 1;
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, NULL);
+        generate_next_moves(move, winner_moves, count_of_winner_moves);
+        free_table(move.table);
+        continue;
+      }
+
+      if (i <= 2 && j >= 2 && table[i + 1][j - 1] == PEG && table[i + 2][j - 2] == EMPTY) {
+        struct MOVE move;
+        move.table = copy_table(table);
+        move.table[i][j] = EMPTY;
+        move.table[i + 1][j - 1] = EMPTY;
+        move.table[i + 2][j - 2] = PEG;
+
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j + 1;
+        move.to = (i + 2) * TABLE_SIZE + (j - 2 + 1);
+        move.depth = parent.depth + 1;
+        move.win = false;
+        generate_next_moves(move, winner_moves, count_of_winner_moves);
         free_table(move.table);
         continue;
       }
@@ -177,9 +227,28 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
         move.depth = parent.depth + 1;
         move.win = false;
 
-        generate_next_moves(move, NULL);
+        generate_next_moves(move, winner_moves, count_of_winner_moves);
         free_table(move.table);
         continue;
+      }
+
+      if (i >= 2 && j >= 2 && table[i - 1][j - 1] == PEG && table[i - 2][j - 2] == EMPTY) {
+        struct MOVE move;
+        move.table = copy_table(table);
+        move.table[i][j] = EMPTY;
+        move.table[i - 1][j - 1] = EMPTY;
+        move.table[i - 2][j - 2] = PEG;
+
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j + 1;
+        move.to = (i - 2) * TABLE_SIZE + (j - 2 + 1);
+        move.depth = parent.depth + 1;
+        move.win = false;
+
+        generate_next_moves(move, winner_moves, count_of_winner_moves);
+        free_table(move.table);
+        continue;
+
       }
     }
   }
