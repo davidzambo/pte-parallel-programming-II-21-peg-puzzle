@@ -88,6 +88,14 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
     if (check_result == WIN_RESULT) {
       printf("win\n");
     }
+    if (check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP) {
+      struct MOVE tmp_move = parent;
+      while (tmp_move.prev_move != NULL) {
+        printf("%d->%d | ", tmp_move.from, tmp_move.to);
+        tmp_move = *tmp_move.prev_move;
+      }
+      printf("\n");
+    }
     parent.win = (check_result == WIN_RESULT);
     if (parent.win) {
       int current_size = sizeof winner_moves / sizeof(struct MOVE *);
@@ -112,8 +120,8 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
         move.table[i - 2][j] = PEG;
 
         move.prev_move = &parent;
-        move.from = i * TABLE_SIZE + j;
-        move.to = (i - 2) * TABLE_SIZE + j;
+        move.from = i * TABLE_SIZE + j + 1;
+        move.to = (i - 2) * TABLE_SIZE + j + 1 ;
         move.depth = parent.depth + 1;
         move.win = false;
         generate_next_moves(move, NULL);
@@ -129,8 +137,8 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
         move.table[i][j + 2] = PEG;
 
         move.prev_move = &parent;
-        move.from = i * TABLE_SIZE + j;
-        move.to = i * TABLE_SIZE + (j + 2);
+        move.from = i * TABLE_SIZE + j + 1;
+        move.to = i * TABLE_SIZE + (j + 2 + 1);
         move.depth = parent.depth + 1;
         move.win = false;
         generate_next_moves(move, NULL);
@@ -146,8 +154,8 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
         move.table[i + 2][j] = PEG;
 
         move.prev_move = &parent;
-        move.from = i * TABLE_SIZE + j;
-        move.to = (i + 2) * TABLE_SIZE + j;
+        move.from = i * TABLE_SIZE + j + 1;
+        move.to = (i + 2) * TABLE_SIZE + j + 1;
         move.depth = parent.depth + 1;
         move.win = false;
         generate_next_moves(move, NULL);
@@ -164,8 +172,8 @@ void generate_next_moves(struct MOVE parent, struct MOVE **winner_moves) {
         move.table[i][j - 2] = PEG;
 
         move.prev_move = &parent;
-        move.from = i * TABLE_SIZE + j;
-        move.to = i * TABLE_SIZE + (j - 2);
+        move.from = i * TABLE_SIZE + j + 1;
+        move.to = i * TABLE_SIZE + (j - 2 + 1);
         move.depth = parent.depth + 1;
         move.win = false;
 
