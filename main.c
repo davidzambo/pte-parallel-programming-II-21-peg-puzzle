@@ -1,10 +1,22 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <malloc.h>
+#include <bits/types/time_t.h>
+#include <time.h>
 
-struct TABLE_ITERATION {
+struct ITERATION {
     int size;
     unsigned short ***tables
+};
+
+struct MOVE {
+    int from;
+    int to;
+    unsigned short **table;
+    bool win;
+    int depth;
+    struct MOVE *prev_move;
+    struct MOVE *next_move
 };
 
 static const int FIELD_NOT_IN_THE_GAME = 7;
@@ -16,7 +28,7 @@ unsigned short **init_table();
 
 bool check_has_next_step(unsigned short **table);
 
-struct TABLE_ITERATION generate_next_tables(unsigned short **table);
+void generate_next_moves(struct MOVE parent);
 
 unsigned short **copy_table(unsigned short **table);
 
@@ -38,31 +50,30 @@ unsigned short **init_table() {
 }
 
 int main() {
-  int i = 0, j = 0;
-  struct TABLE_ITERATION iteration;
-  unsigned short **table = init_table();
-  unsigned short ***tables_after_move, ***temp_table, **table_after_move;
-  iteration = generate_next_tables(table);
-  tables_after_move = iteration.tables;
-  while (j++ < iteration.size) {
-    table_after_move = tables_after_move[j];
-    printf("\nThe %d table:\n", j);
-    for (i = 0; i < TABLE_SIZE; i++) {
-      printf("%d %d %d %d %d\n", table_after_move[i][0], table_after_move[i][1], table_after_move[i][2],
-             table_after_move[i][3], table_after_move[i][4]);
-    }
-  }
-  printf("\nThis is the end.\n");
+  time_t start, end;
+  time(&start);
+  int i, j = 0, k = 0;
+  struct ITERATION iteration, tmp_iteration;
+  unsigned short **tmp_table, **table = init_table();
+  struct MOVE base;
+  base.table = table;
+  base.win = false;
+  base.depth = 1;
+
+  generate_next_moves(base);
+
+  time(&end);
+  printf("That's it in %2lf seconds", difftime(start, end));
+
 }
 
-struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
-  struct TABLE_ITERATION return_value;
+void generate_next_moves(struct MOVE parent) {
+//  printf("DEPTH: %d, FROM: %d TO: %d \n", parent.depth, parent.from, parent.to);
+  unsigned short **temp_table,
+          **table = parent.table;
 
-  int table_counter = 0;
-  unsigned short ***tables = malloc((table_counter + 1) * sizeof(short **));
-  unsigned short **temp_table;
-  if (!check_has_next_step(table)) {
-    return return_value;
+  if (!check_has_next_step(parent.table) || parent.depth > 19) {
+    return;
   }
   int i, j;
   for (i = 0; i < TABLE_SIZE; i++) {
@@ -76,8 +87,13 @@ struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
         temp_table[i][j] = EMPTY;
         temp_table[i - 1][j] = EMPTY;
         temp_table[i - 2][j] = PUG;
-        tables = realloc(tables, (++table_counter + 1) * sizeof(short **));
-        tables[table_counter] = temp_table;
+        struct MOVE move;
+        move.table = temp_table;
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j;
+        move.to = (i - 2) * TABLE_SIZE + j;
+        move.depth = parent.depth + 1;
+        generate_next_moves(move);
         continue;
       }
 
@@ -86,8 +102,13 @@ struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
         temp_table[i][j] = EMPTY;
         temp_table[i - 1][j + 1] = EMPTY;
         temp_table[i - 2][j + 2] = PUG;
-        tables = realloc(tables, (++table_counter + 1) * sizeof(short **));
-        tables[table_counter] = temp_table;
+        struct MOVE move;
+        move.table = temp_table;
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j;
+        move.to = (i - 2) * TABLE_SIZE + (j + 2);
+        move.depth = parent.depth + 1;
+        generate_next_moves(move);
         continue;
       }
 
@@ -96,8 +117,13 @@ struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
         temp_table[i][j] = EMPTY;
         temp_table[i][j + 1] = EMPTY;
         temp_table[i][j + 2] = PUG;
-        tables = realloc(tables, (++table_counter + 1) * sizeof(short **));
-        tables[table_counter] = temp_table;
+        struct MOVE move;
+        move.table = temp_table;
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j;
+        move.to = i * TABLE_SIZE + (j + 2);
+        move.depth = parent.depth + 1;
+        generate_next_moves(move);
         continue;
       }
 
@@ -106,8 +132,13 @@ struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
         temp_table[i][j] = EMPTY;
         temp_table[i + 1][j + 1] = EMPTY;
         temp_table[i + 2][j + 2] = PUG;
-        tables = realloc(tables, (++table_counter + 1) * sizeof(short **));
-        tables[table_counter] = temp_table;
+        struct MOVE move;
+        move.table = temp_table;
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j;
+        move.to = (i + 2) * TABLE_SIZE + (j + 2);
+        move.depth = parent.depth + 1;
+        generate_next_moves(move);
         continue;
       }
 
@@ -116,8 +147,13 @@ struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
         temp_table[i][j] = EMPTY;
         temp_table[i + 1][j] = EMPTY;
         temp_table[i + 2][j] = PUG;
-        tables = realloc(tables, (++table_counter + 1) * sizeof(short **));
-        tables[table_counter] = temp_table;
+        struct MOVE move;
+        move.table = temp_table;
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j;
+        move.to = (i + 2) * TABLE_SIZE + j;
+        move.depth = parent.depth + 1;
+        generate_next_moves(move);
         continue;
       }
 
@@ -126,8 +162,13 @@ struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
         temp_table[i][j] = EMPTY;
         temp_table[i + 1][j - 1] = EMPTY;
         temp_table[i + 2][j - 2] = PUG;
-        tables = realloc(tables, (++table_counter + 1) * sizeof(short **));
-        tables[table_counter] = temp_table;
+        struct MOVE move;
+        move.table = temp_table;
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j;
+        move.to = (i + 2) * TABLE_SIZE + (j - 2);
+        move.depth = parent.depth + 1;
+        generate_next_moves(move);
         continue;
       }
 
@@ -136,8 +177,13 @@ struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
         temp_table[i][j] = EMPTY;
         temp_table[i][j - 1] = EMPTY;
         temp_table[i][j - 2] = PUG;
-        tables = realloc(tables, (++table_counter + 1) * sizeof(short **));
-        tables[table_counter] = temp_table;
+        struct MOVE move;
+        move.table = temp_table;
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j;
+        move.to = i * TABLE_SIZE + (j - 2);
+        move.depth = parent.depth + 1;
+        generate_next_moves(move);
         continue;
       }
 
@@ -146,15 +192,17 @@ struct TABLE_ITERATION generate_next_tables(unsigned short **table) {
         temp_table[i][j] = EMPTY;
         temp_table[i - 1][j - 1] = EMPTY;
         temp_table[i - 2][j - 2] = PUG;
-        tables = realloc(tables, (++table_counter + 1) * sizeof(short **));
-        tables[table_counter] = temp_table;
+        struct MOVE move;
+        move.table = temp_table;
+        move.prev_move = &parent;
+        move.from = i * TABLE_SIZE + j;
+        move.to = (i - 2) * TABLE_SIZE + (j - 2);
+        move.depth = parent.depth + 1;
+        generate_next_moves(move);
         continue;
       }
     }
   }
-  return_value.size = table_counter;
-  return_value.tables = tables;
-  return return_value;
 }
 
 unsigned short **copy_table(unsigned short **table) {
@@ -192,7 +240,6 @@ bool check_has_next_step(unsigned short **table) {
                 (i >= 2 && j >= 2 && table[i - 1][j - 1] == PUG && table[i - 2][j - 2] == EMPTY))
                 ) {
           has_pug_to_jump_with = true;
-
         }
       }
     }
