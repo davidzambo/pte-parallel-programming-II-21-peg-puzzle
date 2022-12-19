@@ -104,14 +104,14 @@ unsigned short **generateMove(unsigned short **table) {
         return table;
       }
 
-      if (j <= 2 && table[i][j - 1] == 1 && table[i][j - 2] == 0) {
+      if (j >= 2 && table[i][j - 1] == PUG && table[i][j - 2] == EMPTY) {
         table[i][j] = EMPTY;
         table[i][j - 1] = EMPTY;
         table[i][j - 2] = PUG;
         return table;
       }
 
-      if (i >= 2 && j >= 2 && table[i - 1][j - 1] == 1 && table[i - 2][j - 2] == 0) {
+      if (i >= 2 && j >= 2 && table[i - 1][j - 1] == PUG && table[i - 2][j - 2] == EMPTY) {
         table[i][j] = EMPTY;
         table[i - 1][j - 1] = EMPTY;
         table[i - 2][j - 2] = PUG;
@@ -142,7 +142,7 @@ bool check_has_next_step(unsigned short **table) {
               (i >= 2 && j >= 2 && table[i - 1][j - 1] == PUG && table[i - 2][j - 2] == EMPTY))
         ) {
           has_pug_to_jump_with = true;
-          break;
+
         }
       }
     }
