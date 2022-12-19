@@ -10,11 +10,12 @@ reduce the original 20 pegs to a single peg
 Write a program to find a solution to this puzzle.
 
 ```
- - | X | X | X | - 
- X | X | X | X | X 
- X | X | O | X | X
- X | X | X | X | X
- - | X | X | X | -
+  | 0 | 1 | 2 | 3 | 4
+0 | - | X | X | X | - 
+1 | X | X | X | X | X 
+2 | X | X | O | X | X
+3 | X | X | X | X | X
+4 | - | X | X | X | -
 ```
 
   X = peg
