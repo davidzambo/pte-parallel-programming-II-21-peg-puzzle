@@ -59,7 +59,6 @@ int main() {
   long * count_of_winner_moves = malloc(sizeof(unsigned long long int));
   *count_of_winner_moves = 1;
   Move base;
-  Move **winner_moves = malloc(*count_of_winner_moves * sizeof(Move *));
   base.table = init_table();
   base.win = false;
   base.depth = 1;
@@ -74,15 +73,12 @@ int main() {
   generate_next_moves(base, count_of_winner_moves, output);
 
   time(&end);
-  printf("That's it in %f seconds\n", difftime(end, start));
-  printf("debug point with %d win Move", count_of_winner_moves);
-
-
+  printf("Found %ld winner moves in %f seconds\n", *count_of_winner_moves, difftime(end, start));
 }
 
 void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output) {
   checked_step_counter++;
-  if (*count_of_winner_moves % 1000000 == 0) {
+  if (*count_of_winner_moves % 10000000 == 0) {
     printf("%d million count of winner moves from %ld checked moves\n", *count_of_winner_moves / 1000000, checked_step_counter);
   }
 
@@ -96,18 +92,17 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
 
   short check_result = check_has_next_step(table);
 
-  if (check_result == WIN_RESULT || check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP || parent.depth > 20) {
-    if (parent.depth > 20) {
-      printf("Reached trashold\n");
-    }
-    if (check_result == WIN_RESULT) {
-      Move tmp_move = parent;
-      while (tmp_move.prev_move != NULL) {
-        fprintf(output, "%d>%d|", tmp_move.from, tmp_move.to);
-        tmp_move = *tmp_move.prev_move;
-      }
-      fprintf(output, "\n");
-    }
+  if (check_result == WIN_RESULT || check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP) {
+//    TEMPORARY TURN OFF THE RESULT LOGGING AS THE GENERATES A MULTIPLE HUNDRED GB FILE
+//
+//    if (check_result == WIN_RESULT) {
+//      Move tmp_move = parent;
+//      while (tmp_move.prev_move != NULL) {
+//        fprintf(output, "%d>%d|", tmp_move.from, tmp_move.to);
+//        tmp_move = *tmp_move.prev_move;
+//      }
+//      fprintf(output, "\n");
+//    }
     parent.win = (check_result == WIN_RESULT);
     if (parent.win) {
       ++(*count_of_winner_moves);
