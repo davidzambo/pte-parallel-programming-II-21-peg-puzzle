@@ -9,6 +9,8 @@ until only one peg remains in the center hole. (Theoretically 19 moves – hops 
 reduce the original 20 pegs to a single peg
 Write a program to find a solution to this puzzle.
 
+The program should read the initial table from an input file 
+
 ```
   | 0 | 1 | 2 | 3 | 4
 0 | - | X | X | X | - 
