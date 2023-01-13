@@ -36,6 +36,8 @@ unsigned short **copy_table(unsigned short **table);
 
 void free_table(unsigned short **table);
 
+void ensure_usage_and_exit();
+
 unsigned short **init_table() {
   unsigned short **table = malloc(TABLE_SIZE * sizeof(short *));
 
@@ -53,7 +55,10 @@ unsigned short **init_table() {
   return table;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+  if (argc != 4) {
+    ensure_usage_and_exit();
+  }
   time_t start, end;
   time(&start);
   long * count_of_winner_moves = malloc(sizeof(unsigned long long int));
@@ -74,6 +79,21 @@ int main() {
 
   time(&end);
   printf("Found %ld winner moves in %f seconds\n", *count_of_winner_moves, difftime(end, start));
+}
+
+void ensure_usage_and_exit() {
+  printf("Usage: ");
+  printf("\tpeg-puzzle-solver -i table.txt -o solutions.txt -c 1000\n");
+  printf("\t\t -i\tpath to the source input file which contains the table\n");
+  printf("\t\t\tThe file should contain an n x n table, with the following symbols:\n");
+  printf("\t\t\tx = peg\n");
+  printf("\t\t\tO = empty hole\n");
+  printf("\t\t\t- = space, that cannot be used\n");
+  printf("\t\t -o\tpath to the output data file\n");
+  printf("\t\t\tPLAIN TEXT file with the possible solutions\n");
+  printf("\t\t -c\tcount of the required solutions\n");
+  printf("\t\t\tPLAIN TEXT file with the possible solutions\n");
+  exit(-1);
 }
 
 void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output) {
