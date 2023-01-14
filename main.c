@@ -4,6 +4,7 @@
 #include <bits/types/time_t.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct MOVE {
     int from;
@@ -37,7 +38,7 @@ unsigned short **init_table();
 
 short check_has_next_step(unsigned short **table);
 
-void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output);
+void generate_next_moves(Move parent, long *count_of_winner_moves, char **winner_moves, int count_of_solutions);
 
 unsigned short **copy_table(unsigned short **table);
 
@@ -70,6 +71,7 @@ int main(int argc, char *argv[]) {
     ensure_usage_and_exit();
   }
   Params params = get_params(argv);
+  char ** winner_steps = malloc(sizeof(char *));
   time_t start, end;
   time(&start);
   long *count_of_winner_moves = malloc(sizeof(unsigned long long int));
@@ -79,14 +81,14 @@ int main(int argc, char *argv[]) {
   base.win = false;
   base.depth = 1;
   FILE *output;
-  output = fopen("results.txt", "w");
+  output = fopen(params.output_filename, "w");
 
   if (output == NULL) {
     printf("\nCan't open results file\nExit\n");
     exit(1);
   }
 
-  generate_next_moves(base, count_of_winner_moves, output);
+  generate_next_moves(base, count_of_winner_moves, winner_steps, params.count_of_solutions);
 
   time(&end);
   printf("Found %ld winner moves in %f seconds\n", *count_of_winner_moves, difftime(end, start));
@@ -134,34 +136,35 @@ Params get_params(char *argv[]) {
 }
 
 
-void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output) {
+void generate_next_moves(Move parent, long *count_of_winner_moves, char **winner_moves, int count_of_solutions) {
+  if (*count_of_winner_moves > count_of_solutions) {
+    return;
+  }
+
   checked_step_counter++;
   if (*count_of_winner_moves % 10000000 == 0) {
     printf("%d million count of winner moves from %ld checked moves\n", *count_of_winner_moves / 1000000,
            checked_step_counter);
   }
 
-  if (parent.depth == 1) {
-    printf("\n1. level\n");
-  }
-  if (parent.depth == 2) {
-    printf("\n2. level\n");
-  }
   unsigned short **table = parent.table;
 
   short check_result = check_has_next_step(table);
 
+  if (check_result == WIN_RESULT) {
+    char *winner_move = malloc(125*sizeof (char*));
+    Move tmp_move = parent;
+    while (tmp_move.prev_move != NULL) {
+      strcpy(winner_move, (char *) tmp_move.from);
+      strcpy(winner_move, ">");
+      strcpy(winner_move, (char *) tmp_move.to);
+      strcpy(winner_move, "|");
+      tmp_move = *tmp_move.prev_move;
+    }
+    winner_moves[*count_of_winner_moves] = winner_move;
+  }
+
   if (check_result == WIN_RESULT || check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP) {
-//    TEMPORARY TURN OFF THE RESULT LOGGING AS THE GENERATES A MULTIPLE HUNDRED GB FILE
-//
-//    if (check_result == WIN_RESULT) {
-//      Move tmp_move = parent;
-//      while (tmp_move.prev_move != NULL) {
-//        fprintf(output, "%d>%d|", tmp_move.from, tmp_move.to);
-//        tmp_move = *tmp_move.prev_move;
-//      }
-//      fprintf(output, "\n");
-//    }
     parent.win = (check_result == WIN_RESULT);
     if (parent.win) {
       ++(*count_of_winner_moves);
@@ -188,7 +191,7 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
         move.to = (i - 2) * TABLE_SIZE + j + 1;
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, count_of_winner_moves, output);
+        generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
       }
@@ -205,7 +208,7 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
         move.to = (i - 2) * TABLE_SIZE + (j + 2 + 1);
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, count_of_winner_moves, output);
+        generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
       }
@@ -222,7 +225,7 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
         move.to = i * TABLE_SIZE + (j + 2 + 1);
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, count_of_winner_moves, output);
+        generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
       }
@@ -239,7 +242,7 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
         move.to = (i + 2) * TABLE_SIZE + (j + 2 + 1);
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, count_of_winner_moves, output);
+        generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
       }
@@ -256,7 +259,7 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
         move.to = (i + 2) * TABLE_SIZE + j + 1;
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, count_of_winner_moves, output);
+        generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
       }
@@ -273,7 +276,7 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
         move.to = (i + 2) * TABLE_SIZE + (j - 2 + 1);
         move.depth = parent.depth + 1;
         move.win = false;
-        generate_next_moves(move, count_of_winner_moves, output);
+        generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
       }
@@ -292,7 +295,7 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
         move.depth = parent.depth + 1;
         move.win = false;
 
-        generate_next_moves(move, count_of_winner_moves, output);
+        generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
       }
@@ -310,7 +313,7 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output)
         move.depth = parent.depth + 1;
         move.win = false;
 
-        generate_next_moves(move, count_of_winner_moves, output);
+        generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
 
