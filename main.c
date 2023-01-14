@@ -14,7 +14,14 @@ struct MOVE {
     struct MOVE *prev_move;
 };
 
+struct PARAMS {
+    char *input_filename;
+    char *output_filename;
+    int count_of_solutions;
+};
+
 typedef struct MOVE Move;
+typedef struct PARAMS Params;
 
 long checked_step_counter = 0;
 
@@ -38,6 +45,8 @@ void free_table(unsigned short **table);
 
 void ensure_usage_and_exit();
 
+Params get_params(char *argv[]);
+
 unsigned short **init_table() {
   unsigned short **table = malloc(TABLE_SIZE * sizeof(short *));
 
@@ -55,13 +64,15 @@ unsigned short **init_table() {
   return table;
 }
 
-int main(int argc, char* argv[]) {
-  if (argc != 4) {
+
+int main(int argc, char *argv[]) {
+  if (argc != 7) {
     ensure_usage_and_exit();
   }
+  Params params = get_params(argv);
   time_t start, end;
   time(&start);
-  long * count_of_winner_moves = malloc(sizeof(unsigned long long int));
+  long *count_of_winner_moves = malloc(sizeof(unsigned long long int));
   *count_of_winner_moves = 1;
   Move base;
   base.table = init_table();
@@ -82,24 +93,52 @@ int main(int argc, char* argv[]) {
 }
 
 void ensure_usage_and_exit() {
-  printf("Usage: ");
-  printf("\tpeg-puzzle-solver -i table.txt -o solutions.txt -c 1000\n");
-  printf("\t\t -i\tpath to the source input file which contains the table\n");
-  printf("\t\t\tThe file should contain an n x n table, with the following symbols:\n");
-  printf("\t\t\tx = peg\n");
-  printf("\t\t\tO = empty hole\n");
-  printf("\t\t\t- = space, that cannot be used\n");
-  printf("\t\t -o\tpath to the output data file\n");
-  printf("\t\t\tPLAIN TEXT file with the possible solutions\n");
-  printf("\t\t -c\tcount of the required solutions\n");
-  printf("\t\t\tPLAIN TEXT file with the possible solutions\n");
+  printf("Usage: \tpte_parallel_programming_II_21_peg_puzzle -i table.txt -o solutions.txt -c 1000\n");
+  printf("\t -i\tpath to the source input file which contains the table\n");
+  printf("\t\tThe file should contain an n x n table, with the following symbols:\n");
+  printf("\t\tX = peg\n");
+  printf("\t\tO = empty hole\n");
+  printf("\t\t- = space, that cannot be used\n");
+  printf("\t -o\tpath to the output data file\n");
+  printf("\t\tPLAIN TEXT file with the possible solutions\n");
+  printf("\t -c\tcount of the required solutions\n");
   exit(-1);
 }
+
+Params get_params(char *argv[]) {
+
+  Params params;
+  params.count_of_solutions = 0;
+
+  for (int i = 1; i < 7; i++) {
+    if (argv[i][0] != '-') {
+      continue;
+    }
+
+    switch (argv[i][1]) {
+      case 'c':
+        params.count_of_solutions = atoi(argv[i + 1]);
+        break;
+      case 'i':
+        params.input_filename = argv[i + 1];
+        break;
+      case 'o':
+        params.output_filename = argv[i + 1];
+        break;
+      default:
+        printf("Invalid input parameters!\n");
+        exit(-1);
+    }
+  }
+  return params;
+}
+
 
 void generate_next_moves(Move parent, long *count_of_winner_moves, FILE *output) {
   checked_step_counter++;
   if (*count_of_winner_moves % 10000000 == 0) {
-    printf("%d million count of winner moves from %ld checked moves\n", *count_of_winner_moves / 1000000, checked_step_counter);
+    printf("%d million count of winner moves from %ld checked moves\n", *count_of_winner_moves / 1000000,
+           checked_step_counter);
   }
 
   if (parent.depth == 1) {
