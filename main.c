@@ -127,9 +127,27 @@ void get_base_table(unsigned short **table, FILE *input) {
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
+  int initial_line_length = 0;
+  int table_row_iterator = 0;
 
   while((read = getline(&line, &len, input)) != -1 ) {
-    printf("line: %s\n", line);
+    if (initial_line_length == 0) {
+      initial_line_length = strlen(line) - 1;
+    }
+    if (initial_line_length != strlen(line) - 1) {
+      printf("\nError: Mixed length input rows, not an n x n matrix. %d %d %s", initial_line_length, strlen(line), line);
+      exit(-1);
+    }
+    if (initial_line_length < table_row_iterator) {
+      printf("\nError: Not an n x n matrix");
+      exit(-1);
+    }
+    table[table_row_iterator] = malloc(initial_line_length * sizeof(short));
+    for (int i = 0; i < strlen(line); i++) {
+      table[table_row_iterator][i] = line[i];
+    }
+    printf("line: %s", line);
+    table_row_iterator++;
   }
 }
 
