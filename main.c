@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <malloc.h>
 #include <bits/types/time_t.h>
 #include <time.h>
 #include <stdlib.h>
@@ -31,8 +30,8 @@ static const int EMPTY = 0;
 static const int PEG = 1;
 static const int TABLE_SIZE = 5;
 static const int WIN_RESULT = 1;
-static const int HAS_ANOTHER_PUG_THAT_CAN_JUMP = 2;
-static const int HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP = 3;
+static const int HAS_ANOTHER_PEG_THAT_CAN_JUMP = 2;
+static const int HAS_ANOTHER_PEG_THAT_CAN_NOT_JUMP = 3;
 
 unsigned short **init_table();
 
@@ -47,6 +46,8 @@ void free_table(unsigned short **table);
 void ensure_usage_and_exit();
 
 Params get_params(char *argv[]);
+
+void get_base_table(unsigned short **table, FILE *input);
 
 unsigned short **init_table() {
   unsigned short **table = malloc(TABLE_SIZE * sizeof(short *));
@@ -71,17 +72,39 @@ int main(int argc, char *argv[]) {
     ensure_usage_and_exit();
   }
   Params params = get_params(argv);
-  char ** winner_steps = malloc(sizeof(char *));
+  char **winner_steps = malloc(params.count_of_solutions * sizeof(char *));
   time_t start, end;
   time(&start);
-  long *count_of_winner_moves = malloc(sizeof(unsigned long long int));
-  *count_of_winner_moves = 1;
+  long *count_of_winner_moves = malloc(sizeof(long long));
+  *count_of_winner_moves = 0;
+  FILE *output, *input;
+  output = fopen(params.output_filename, "w");
+
+  if (output == NULL) {
+    printf("Error! Unable to open output file!\n");
+    exit(-1);
+  }
+
+  input = fopen(params.input_filename, "r");
+
+  if (input == NULL) {
+    printf("Error! Unable to open input file!\n");
+    exit(-1);
+  }
   Move base;
   base.table = init_table();
+  get_base_table(base.table, input);
   base.win = false;
   base.depth = 1;
-  FILE *output;
-  output = fopen(params.output_filename, "w");
+  int solution_counter = 0;
+
+  for (solution_counter = 0; solution_counter < params.count_of_solutions; solution_counter++) {
+    winner_steps[solution_counter] = malloc(125 * sizeof (char));
+    if (winner_steps[solution_counter] == NULL) {
+      printf("\nUnable to allocate memory\n");
+      exit(-1);
+    }
+  }
 
   if (output == NULL) {
     printf("\nCan't open results file\nExit\n");
@@ -90,8 +113,24 @@ int main(int argc, char *argv[]) {
 
   generate_next_moves(base, count_of_winner_moves, winner_steps, params.count_of_solutions);
 
+  solution_counter = 0;
+  while (winner_steps[solution_counter] != NULL && solution_counter < params.count_of_solutions) {
+    fprintf(output, "%s", winner_steps[solution_counter++]);
+  }
+
   time(&end);
   printf("Found %ld winner moves in %f seconds\n", *count_of_winner_moves, difftime(end, start));
+}
+
+void get_base_table(unsigned short **table, FILE *input) {
+  table = malloc(TABLE_SIZE * sizeof(short *));
+  char *line = NULL;
+  size_t len = 0;
+  ssize_t read;
+
+  while((read = getline(&line, &len, input)) != -1 ) {
+    printf("line: %s\n", line);
+  }
 }
 
 void ensure_usage_and_exit() {
@@ -137,12 +176,12 @@ Params get_params(char *argv[]) {
 
 
 void generate_next_moves(Move parent, long *count_of_winner_moves, char **winner_moves, int count_of_solutions) {
-  if (*count_of_winner_moves > count_of_solutions) {
+  if (*count_of_winner_moves >= count_of_solutions) {
     return;
   }
 
   checked_step_counter++;
-  if (*count_of_winner_moves % 10000000 == 0) {
+  if (*count_of_winner_moves > 0 && *count_of_winner_moves % 10000000 == 0) {
     printf("%d million count of winner moves from %ld checked moves\n", *count_of_winner_moves / 1000000,
            checked_step_counter);
   }
@@ -152,22 +191,20 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, char **winner
   short check_result = check_has_next_step(table);
 
   if (check_result == WIN_RESULT) {
-    char *winner_move = malloc(125*sizeof (char*));
     Move tmp_move = parent;
     while (tmp_move.prev_move != NULL) {
-      strcpy(winner_move, (char *) tmp_move.from);
-      strcpy(winner_move, ">");
-      strcpy(winner_move, (char *) tmp_move.to);
-      strcpy(winner_move, "|");
+      char *tmp_movement_string = malloc(6 * sizeof(char));
+      sprintf(tmp_movement_string, "%d>%d|", tmp_move.from, tmp_move.to);
+      strcat(winner_moves[*count_of_winner_moves], tmp_movement_string);
       tmp_move = *tmp_move.prev_move;
     }
-    winner_moves[*count_of_winner_moves] = winner_move;
+    strcat(winner_moves[*count_of_winner_moves], "\n");
   }
 
-  if (check_result == WIN_RESULT || check_result == HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP) {
+  if (check_result == WIN_RESULT || check_result == HAS_ANOTHER_PEG_THAT_CAN_NOT_JUMP) {
     parent.win = (check_result == WIN_RESULT);
     if (parent.win) {
-      ++(*count_of_winner_moves);
+      (*count_of_winner_moves)++;
     }
     return;
   }
@@ -316,7 +353,6 @@ void generate_next_moves(Move parent, long *count_of_winner_moves, char **winner
         generate_next_moves(move, count_of_winner_moves, winner_moves, count_of_solutions);
         free_table(move.table);
         continue;
-
       }
     }
   }
@@ -346,13 +382,13 @@ unsigned short **copy_table(unsigned short **table) {
 
 short check_has_next_step(unsigned short **table) {
   int i, j, sum = 0;
-  bool has_pug_to_jump_with = false;
+  bool has_peg_to_jump_with = false;
 
   for (i = 0; i < TABLE_SIZE; i++) {
     for (j = 0; j < TABLE_SIZE; j++) {
       sum += table[i][j];
 
-      if (!has_pug_to_jump_with) {
+      if (!has_peg_to_jump_with) {
         if (table[i][j] == PEG && (
                 (i >= 2 && table[i - 1][j] == PEG && table[i - 2][j] == EMPTY) ||
                 (i >= 2 && j <= 2 && table[i - 1][j + 1] == PEG && table[i - 2][j + 2] == EMPTY) ||
@@ -363,7 +399,7 @@ short check_has_next_step(unsigned short **table) {
                 (j >= 2 && table[i][j - 1] == PEG && table[i][j - 2] == EMPTY) ||
                 (i >= 2 && j >= 2 && table[i - 1][j - 1] == PEG && table[i - 2][j - 2] == EMPTY))
                 ) {
-          has_pug_to_jump_with = true;
+          has_peg_to_jump_with = true;
         }
       }
     }
@@ -374,5 +410,5 @@ short check_has_next_step(unsigned short **table) {
     return WIN_RESULT;
   }
 
-  return has_pug_to_jump_with ? HAS_ANOTHER_PUG_THAT_CAN_JUMP : HAS_ANOTHER_PUG_THAT_CAN_NOT_JUMP;
+  return has_peg_to_jump_with ? HAS_ANOTHER_PEG_THAT_CAN_JUMP : HAS_ANOTHER_PEG_THAT_CAN_NOT_JUMP;
 }
