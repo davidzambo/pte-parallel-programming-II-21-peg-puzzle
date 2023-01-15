@@ -47,7 +47,9 @@ void ensure_usage_and_exit();
 
 Params get_params(char *argv[]);
 
-void get_base_table(unsigned short **table, FILE *input);
+unsigned short ** get_base_table(FILE *input);
+
+unsigned short get_field_type(char c, int i, int i1);
 
 unsigned short **init_table() {
   unsigned short **table = malloc(TABLE_SIZE * sizeof(short *));
@@ -92,8 +94,7 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
   Move base;
-  base.table = init_table();
-  get_base_table(base.table, input);
+  base.table = get_base_table(input);
   base.win = false;
   base.depth = 1;
   int solution_counter = 0;
@@ -117,25 +118,26 @@ int main(int argc, char *argv[]) {
   while (winner_steps[solution_counter] != NULL && solution_counter < params.count_of_solutions) {
     fprintf(output, "%s", winner_steps[solution_counter++]);
   }
+  fclose(output);
 
   time(&end);
   printf("Found %ld winner moves in %f seconds\n", *count_of_winner_moves, difftime(end, start));
 }
 
-void get_base_table(unsigned short **table, FILE *input) {
-  table = malloc(TABLE_SIZE * sizeof(short *));
+unsigned short ** get_base_table(FILE *input) {
+  unsigned short **table = malloc(TABLE_SIZE * sizeof(short *));
   char *line = NULL;
   size_t len = 0;
-  ssize_t read;
   int initial_line_length = 0;
   int table_row_iterator = 0;
 
-  while((read = getline(&line, &len, input)) != -1 ) {
+  while(getline(&line, &len, input) != -1 ) {
+    size_t line_length = strlen(line);
     if (initial_line_length == 0) {
-      initial_line_length = strlen(line) - 1;
+      initial_line_length = line_length - 1;
     }
-    if (initial_line_length != strlen(line) - 1) {
-      printf("\nError: Mixed length input rows, not an n x n matrix. %d %d %s", initial_line_length, strlen(line), line);
+    if (initial_line_length != line_length - 1) {
+      printf("\nError: Mixed length input rows, not an n x n matrix. %d %d %s", initial_line_length, line_length, line);
       exit(-1);
     }
     if (initial_line_length < table_row_iterator) {
@@ -143,22 +145,37 @@ void get_base_table(unsigned short **table, FILE *input) {
       exit(-1);
     }
     table[table_row_iterator] = malloc(initial_line_length * sizeof(short));
-    for (int i = 0; i < strlen(line); i++) {
-      table[table_row_iterator][i] = line[i];
+    for (int i = 0; i < line_length - 1; i++) {
+      table[table_row_iterator][i] = get_field_type(line[i], table_row_iterator, i);
     }
-    printf("line: %s", line);
     table_row_iterator++;
+  }
+  return table;
+}
+
+unsigned short get_field_type(char c, int row, int column) {
+  switch (c) {
+    case 'X':
+      return PEG;
+    case 'O':
+      return EMPTY;
+    case '-':
+      return FIELD_NOT_IN_THE_GAME;
+    default:
+      printf("Unknown table field in %d row and %d colum: %c", row, column, c);
+      exit(-1);
   }
 }
 
 void ensure_usage_and_exit() {
   printf("Usage: \tpte_parallel_programming_II_21_peg_puzzle -i table.txt -o solutions.txt -c 1000\n");
-  printf("\t -i\tpath to the source input file which contains the table\n");
+  printf("\t -i\tpath to the source input file which contains the table.\n");
   printf("\t\tThe file should contain an n x n table, with the following symbols:\n");
   printf("\t\tX = peg\n");
   printf("\t\tO = empty hole\n");
   printf("\t\t- = space, that cannot be used\n");
   printf("\t -o\tpath to the output data file\n");
+  printf("\t\tThe file should be ended with a new line.\n");
   printf("\t\tPLAIN TEXT file with the possible solutions\n");
   printf("\t -c\tcount of the required solutions\n");
   exit(-1);
