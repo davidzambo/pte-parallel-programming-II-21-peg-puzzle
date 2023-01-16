@@ -33,8 +33,6 @@ static const int WIN_RESULT = 1;
 static const int HAS_ANOTHER_PEG_THAT_CAN_JUMP = 2;
 static const int HAS_ANOTHER_PEG_THAT_CAN_NOT_JUMP = 3;
 
-unsigned short **init_table();
-
 short check_has_next_step(unsigned short **table);
 
 void generate_next_moves(Move parent, long *count_of_winner_moves, char **winner_moves, int count_of_solutions);
@@ -49,24 +47,7 @@ Params get_params(char *argv[]);
 
 unsigned short ** get_base_table(FILE *input);
 
-unsigned short get_field_type(char c, int i, int i1);
-
-unsigned short **init_table() {
-  unsigned short **table = malloc(TABLE_SIZE * sizeof(short *));
-
-  short i, j;
-
-  for (i = 0; i < TABLE_SIZE; i++) {
-    table[i] = malloc(TABLE_SIZE * sizeof(short));
-    for (j = 0; j < TABLE_SIZE; j++) {
-      table[i][j] = PEG;
-    }
-  }
-
-  table[0][0] = table[0][4] = table[4][0] = table[4][4] = FIELD_NOT_IN_THE_GAME;
-  table[2][2] = EMPTY;
-  return table;
-}
+unsigned short get_field_type(char c, int row, int column);
 
 
 int main(int argc, char *argv[]) {

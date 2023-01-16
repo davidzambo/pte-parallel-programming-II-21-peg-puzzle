@@ -24,6 +24,20 @@ The program should read the initial table from an input file
   - = space that cannot be used.
 ```
 
+Usage:
+```
+Usage: 	pte_parallel_programming_II_21_peg_puzzle -i table.txt -o solutions.txt -c 1000
+    -i	path to the source input file which contains the table.
+The file should contain an n x n table, with the following symbols:
+X = peg
+O = empty hole
+- = space, that cannot be used
+-o	path to the output data file
+The file should be ended with a new line.
+PLAIN TEXT file with the possible solutions
+-c	count of the required solutions
+```
+
 Measured results:
 > Start: Tuesday, 13:30\
 > Finish with the first quarter: Friday, ~01:30\
